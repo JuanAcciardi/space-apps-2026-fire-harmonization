@@ -74,8 +74,8 @@
 
   // ---------- map ----------------------------------------------------------------------------
   const map = L.map('map', { zoomControl: true, preferCanvas: true, attributionControl: true }).setView([-38.5, -64], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, attribution: '© OpenStreetMap, © CARTO' }).addTo(map);
-  const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, pane: 'shadowPane' }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 12, attribution: 'Basemap © Esri, HERE, Garmin, OpenStreetMap contributors' }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 12, pane: 'shadowPane' }).addTo(map);
   const provGeo = await (await fetch('data/provincias.geojson')).json();
   L.geoJSON(provGeo, { style: { color: css('--ink-2'), weight: 0.8, fill: false, opacity: 0.6 }, interactive: false }).addTo(map);
   const cellLayer = L.layerGroup().addTo(map);
@@ -195,7 +195,7 @@
     ];
     if (state.raw) traces.push({ x, y: an.joined, name: 'Naive joined record', mode: 'lines+markers', line: { color: css('--joined'), width: 2 }, marker: { size: 6 } });
     const lay = base(); lay.yaxis.title = { text: 'hot spots / year', font: { size: 12 } }; lay.shapes = [{ type: 'line', x0: 2012, x1: 2012, y0: 0, y1: 1, yref: 'paper', line: { color: css('--axis'), width: 1 } }];
-    lay.annotations = [{ x: 2012, y: 1, yref: 'paper', text: 'VIIRS starts', showarrow: false, xanchor: 'left', font: { size: 11, color: css('--muted') } }];
+    lay.annotations = [{ x: 2012, y: 0.02, yref: 'paper', text: 'VIIRS starts', showarrow: false, xanchor: 'left', yanchor: 'bottom', font: { size: 11, color: css('--muted') } }];
     Plotly.react('chart-annual', traces, lay, CFG);
   }
   function chartCalendar(mo) {
@@ -334,5 +334,13 @@
   });
   $('generated').textContent = 'Data built ' + meta.generated + '.';
 
+  // URL state (?aoi=Corrientes&year=2020&month=8&layer=modis&tab=switch) so views can be shared
+  const q = new URLSearchParams(location.search);
+  if (q.get('year')) { state.year = Math.min(YEARS[YEARS.length - 1], Math.max(Y0, +q.get('year'))); $('year').value = state.year; $('year-out').value = state.year; }
+  if (q.get('month')) { state.month = +q.get('month'); $('month').value = state.month; }
+  if (q.get('layer') && [...$('layer').options].some((o) => o.value === q.get('layer'))) { state.layer = q.get('layer'); $('layer').value = state.layer; }
+  if (q.get('raw') === '1') { state.raw = true; $('show-raw').checked = true; }
   paintMap(); renderPanel();
+  if (q.get('aoi')) { const i = meta.provinces.findIndex((p) => p.toLowerCase() === q.get('aoi').toLowerCase()); if (i >= 0) { sel.value = String(i); sel.onchange(); } }
+  if (q.get('tab')) { const b = document.querySelector(`.tab[data-tab="${q.get('tab')}"]`); if (b) b.click(); }
 })();
