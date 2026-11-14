@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Burning Activity Calendar</title>
+<meta name="description" content="One consistent fire record for Argentina from NASA FIRMS MODIS (2001-) and VIIRS (2012-) hot spots, harmonized on the VIIRS scale, with a burning activity calendar for any area of interest.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Burning Activity Calendar <span class="muted">· Argentina 2001–2025</span></h1>
+    <p class="tagline">MODIS (1 km, 2001–) and VIIRS (375 m, 2012–) hot spots from NASA FIRMS, harmonized into one record on the VIIRS scale. Pick a province, draw a box or click a cell.</p>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="explore" role="tab">Explore</button>
+    <button class="tab" data-tab="switch" role="tab">The 2012 switch</button>
+    <button class="tab" data-tab="method" role="tab">Method &amp; validation</button>
+  </nav>
+</header>
+
+<section class="filters" id="filters">
+  <label>Area
+    <select id="aoi-select"></select>
+  </label>
+  <button id="draw-btn" class="btn" title="Draw a rectangle on the map">Draw box</button>
+  <button id="clear-btn" class="btn ghost" title="Back to all of Argentina">Reset</button>
+  <span class="sep"></span>
+  <label>Year <input id="year" type="range" min="2001" max="2025" value="2025" step="1"> <output id="year-out">2025</output></label>
+  <label>Month
+    <select id="month">
+      <option value="-1">Whole year</option>
+      <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option>
+      <option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option>
+      <option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+    </select>
+  </label>
+  <span class="sep"></span>
+  <label>Map layer
+    <select id="layer">
+      <option value="harm">Harmonized (VIIRS scale)</option>
+      <option value="modis">MODIS raw</option>
+      <option value="snpp">VIIRS S-NPP raw</option>
+      <option value="noaa20">VIIRS NOAA-20 raw</option>
+      <option value="k">Factor k = VIIRS / MODIS</option>
+      <option value="src">Source of value</option>
+    </select>
+  </label>
+  <label class="chk"><input type="checkbox" id="show-raw"> Show naive joined record</label>
+</section>
+
+<main id="tab-explore" class="tabpane active">
+  <div class="map-col">
+    <div id="map" aria-label="Map of H3 cells over Argentina"></div>
+    <div class="legend" id="legend"></div>
+    <p class="hint" id="map-hint">Click a cell to select it. Shift-click adds cells. Hot spot = one 36 km² cell with fire on one day.</p>
+  </div>
+  <div class="panel">
+    <div class="aoi-head">
+      <h2 id="aoi-name">Argentina</h2>
+      <div class="muted" id="aoi-meta"></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="tile-label" id="hero-label">Hot spots, 2025</div><div class="hero" id="hero-value">–</div><div class="tile-sub" id="hero-sub"></div></div>
+      <div class="tile"><div class="tile-label">vs normal (median 2001–2025)</div><div class="hero" id="anom-value">–</div><div class="tile-sub" id="anom-sub"></div></div>
+      <div class="tile"><div class="tile-label">Where the number comes from</div><div class="src-bar" id="src-bar"></div><div class="tile-sub" id="src-sub"></div></div>
+    </div>
+
+    <section class="card">
+      <h3>Hot spots per year <span class="muted">· raw by sensor and harmonized</span></h3>
+      <div id="chart-annual" class="chart"></div>
+    </section>
+
+    <section class="card">
+      <h3>Burning activity calendar <span class="muted">· hot spots per month, harmonized</span></h3>
+      <div id="chart-calendar" class="chart tall"></div>
+    </section>
+
+    <section class="card">
+      <h3>Seasonality <span class="muted">· median month 2001–2025 vs selected year</span></h3>
+      <div id="chart-season" class="chart"></div>
+    </section>
+
+    <section class="card" id="daily-card">
+      <h3>Daily calendar <span class="muted">· harmonized hot spots per day</span></h3>
+      <div id="chart-daily" class="chart tall"></div>
+      <p class="hint" id="daily-hint"></p>
+    </section>
+
+    <section class="card">
+      <h3>Table <span class="muted">· same numbers, downloadable</span></h3>
+      <div class="table-tools"><button class="btn ghost" id="csv-btn">Download CSV (monthly)</button></div>
+      <div class="table-wrap"><table id="table"></table></div>
+    </section>
+  </div>
+</main>
+
+<main id="tab-switch" class="tabpane">
+  <div class="story">
+    <h2>Two satellites, one planet, a fake jump in 2012</h2>
+    <p>VIIRS (375 m pixels) sees smaller and cooler fires than MODIS (1 km pixels). In Argentina it records about <strong id="k-avg">2×</strong> as many hot spots for the same burning. Join the two records end to end and fire activity appears to jump the year VIIRS arrives. That is the instrument changing, not the country.</p>
+    <div id="chart-switch" class="chart tall"></div>
+    <div class="tiles">
+      <div class="tile"><div class="tile-label">Naive joined record, 2013–15 vs 2009–11</div><div class="hero" id="seam-raw">–</div><div class="tile-sub">apparent change</div></div>
+      <div class="tile"><div class="tile-label">Harmonized record</div><div class="hero" id="seam-harm">–</div><div class="tile-sub">what the fires did</div></div>
+      <div class="tile"><div class="tile-label">MODIS alone (control)</div><div class="hero" id="seam-modis">–</div><div class="tile-sub">same satellites on both sides</div></div>
+    </div>
+    <p>Why it matters now: NASA FIRMS stopped producing Suomi NPP data on 2 November 2026, and the Terra and Aqua MODIS missions end in 2027. Every long fire record is about to cross another seam. The method here ties the sensors together so the record stays usable for early warning, fire management and science.</p>
+  </div>
+</main>
+
+<main id="tab-method" class="tabpane">
+  <div class="story">
+    <h2>Method</h2>
+    <ol>
+      <li><strong>Same unit for every sensor.</strong> Detections are filtered to vegetation fires (FIRMS <code>type = 0</code>, confidence not low) and snapped to a day in local time and an H3 res-6 cell (~36 km²). One cell-day with fire is one <em>hot spot</em>, whatever the pixel size. Counting cells, not pixels, already removes most of the 1 km vs 375 m inflation.</li>
+      <li><strong>Learn the exchange rate.</strong> For every H3 res-4 cell (~1,770 km²) and calendar month, the factor <em>k = VIIRS hot spots / MODIS hot spots</em> is measured over the years both flew (2012–2025), with hierarchical shrinkage towards the region (res 3) and the country where fire is sparse. No intercept: zero MODIS fire stays zero.</li>
+      <li><strong>Bridge the record.</strong> 2012–2025 is S-NPP as observed. Months without S-NPP use NOAA-20 scaled by its own factor (≈1.0). 2001–2011 is MODIS × k. Nov 2000–Jun 2002, when only Terra flew, is first scaled to Terra+Aqua by a regional factor learned in 2003–2011.</li>
+      <li><strong>Validate backwards.</strong> Factors fitted on 2016–2025 only are used to predict S-NPP in 2012–2015, which the fit never saw. A LightGBM Poisson model (MODIS counts, FRP, day/night share, fire days, month, location) is trained the same way as a second estimate.</li>
+      <li><strong>Say what cannot be known.</strong> Before 2012 nobody measured VIIRS, so the factor assumes each place's ratio stayed stable. Values before 2012 carry a 90% band calibrated on the backtest. Days before 2012 are indicative only.</li>
+    </ol>
+    <h2>Validation</h2>
+    <div id="validation"></div>
+    <h2>Data</h2>
+    <ul>
+      <li>NASA FIRMS country-yearly archives (MODIS C6.1 Terra+Aqua 2000–2025; VIIRS S-NPP C2 2012–2025; VIIRS NOAA-20 C2 2018–2025), <a href="https://firms.modaps.eosdis.nasa.gov/country/">firms.modaps.eosdis.nasa.gov/country</a>.</li>
+      <li>Boundaries: geoBoundaries ARG ADM0/ADM1 (open licence). Grid: Uber H3.</li>
+      <li>Everything is reproducible from the repository: download → ingest → aggregate → harmonize → export; every decision lives in <code>src/config.py</code>.</li>
+    </ul>
+  </div>
+</main>
+
+<footer class="foot muted">NASA Space Apps Challenge 2026 · Challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE) · Hot spots are satellite thermal anomalies, not confirmed wildfires. Absence of detection is not absence of fire (clouds, overpass gaps). <span id="generated"></span></footer>
+
+<div id="tooltip" class="tooltip" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
