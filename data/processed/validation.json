@@ -22,7 +22,8 @@
    "2022": 1.063,
    "2023": 0.997,
    "2024": 1.099,
-   "2025": 1.027
+   "2025": 1.027,
+   "2026": 1.127
   },
   "frp": {
    "2018": 0.9,
@@ -32,12 +33,31 @@
    "2022": 0.981,
    "2023": 0.911,
    "2024": 0.996,
-   "2025": 1.011
+   "2025": 1.011,
+   "2026": 1.149
   }
  },
  "noaa20_to_snpp_factor": {
-  "hotspots": 0.9681,
-  "frp": 1.0193
+  "hotspots": 0.963,
+  "frp": 1.0116
+ },
+ "noaa21_over_snpp_by_year": {
+  "hotspots": {
+   "2023": 1.014,
+   "2024": 1.088,
+   "2025": 1.032,
+   "2026": 1.111
+  },
+  "frp": {
+   "2023": 1.033,
+   "2024": 1.171,
+   "2025": 1.125,
+   "2026": 1.211
+  }
+ },
+ "noaa21_to_snpp_factor": {
+  "hotspots": 0.9454,
+  "frp": 0.8878
  },
  "backtest_2012_2015": {
   "cell_month": [
@@ -45,24 +65,24 @@
     "method": "raw MODIS (no harmonization)",
     "total_bias_pct": -52.46,
     "wape_pct": 60.8,
-    "rmse": 4.78,
-    "n_rows": 97344,
+    "rmse": 4.77,
+    "n_rows": 97728,
     "n_rows_fire": 32838
    },
    {
     "method": "ratio shrunk",
     "total_bias_pct": 0.0,
     "wape_pct": 49.3,
-    "rmse": 3.33,
-    "n_rows": 97344,
+    "rmse": 3.32,
+    "n_rows": 97728,
     "n_rows_fire": 32838
    },
    {
     "method": "lightgbm poisson",
-    "total_bias_pct": 1.74,
+    "total_bias_pct": 1.69,
     "wape_pct": 44.4,
-    "rmse": 2.81,
-    "n_rows": 97344,
+    "rmse": 2.8,
+    "n_rows": 97728,
     "n_rows_fire": 32838
    }
   ],
@@ -71,44 +91,44 @@
     "y_hs": 67586,
     "pred_raw": 33573,
     "pred_ratio": 71521,
-    "pred_lgbm": 69753
+    "pred_lgbm": 69785
    },
    "2013": {
     "y_hs": 72193,
     "pred_raw": 34654,
     "pred_ratio": 72212,
-    "pred_lgbm": 69672
+    "pred_lgbm": 69547
    },
    "2014": {
     "y_hs": 42006,
     "pred_raw": 19063,
     "pred_ratio": 39406,
-    "pred_lgbm": 45523
+    "pred_lgbm": 45459
    },
    "2015": {
     "y_hs": 54706,
     "pred_raw": 25145,
     "pred_ratio": 53359,
-    "pred_lgbm": 55670
+    "pred_lgbm": 55695
    }
   },
   "cell_4yr_fire_weighted_abs_err_pred_ratio": 0.154,
   "cell_4yr_median_abs_err_pred_ratio": 0.167,
   "cell_4yr_fire_weighted_abs_err_pred_lgbm": 0.134,
-  "cell_4yr_median_abs_err_pred_lgbm": 0.14
+  "cell_4yr_median_abs_err_pred_lgbm": 0.138
  },
  "lgbm_feature_gain": {
-  "hotspots": 13842739.0,
-  "n_det": 73068.5,
-  "frp": 550089.8,
-  "fire_days": 1359934.5,
-  "night_share": 20187.2,
-  "frp_per_det": 1042617.6,
-  "mcal": 60050.9,
-  "lat": 436581.1,
-  "lon": 564529.5,
-  "modis_clim": 1050415.8,
-  "log_hs": 222194.3
+  "hotspots": 13419925.9,
+  "n_det": 92693.9,
+  "frp": 439074.8,
+  "fire_days": 1768357.3,
+  "night_share": 19779.9,
+  "frp_per_det": 1191995.4,
+  "mcal": 59676.8,
+  "lat": 432594.6,
+  "lon": 553676.9,
+  "modis_clim": 1084173.9,
+  "log_hs": 227541.4
  },
  "uncertainty_ratio_quantiles_by_pred_bin": {
   "(0.0, 2.0]": [
@@ -143,7 +163,7 @@
  "seam_2012_national": {
   "raw_joined_post_over_pre": 1.502,
   "harmonized_post_over_pre": 0.735,
-  "harmonized_lgbm_post_over_pre": 0.777,
+  "harmonized_lgbm_post_over_pre": 0.775,
   "modis_only_post_over_pre": 0.701
  },
  "national_annual": {
@@ -151,8 +171,9 @@
    "hotspots_MODIS": 15439,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 78612,
-   "harm_hotspots_lgbm": 103772,
+   "harm_hotspots_lgbm": 103603,
    "harm_lo": 24654,
    "harm_hi": 119030
   },
@@ -160,8 +181,9 @@
    "hotspots_MODIS": 30722,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 94548,
-   "harm_hotspots_lgbm": 97571,
+   "harm_hotspots_lgbm": 97849,
    "harm_lo": 28322,
    "harm_hi": 148374
   },
@@ -169,8 +191,9 @@
    "hotspots_MODIS": 60000,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 124520,
-   "harm_hotspots_lgbm": 108571,
+   "harm_hotspots_lgbm": 108739,
    "harm_lo": 39366,
    "harm_hi": 191789
   },
@@ -178,8 +201,9 @@
    "hotspots_MODIS": 53529,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 114784,
-   "harm_hotspots_lgbm": 100509,
+   "harm_hotspots_lgbm": 101185,
    "harm_lo": 35776,
    "harm_hi": 180750
   },
@@ -187,8 +211,9 @@
    "hotspots_MODIS": 38291,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 79903,
-   "harm_hotspots_lgbm": 73795,
+   "harm_hotspots_lgbm": 73844,
    "harm_lo": 20799,
    "harm_hi": 136542
   },
@@ -196,8 +221,9 @@
    "hotspots_MODIS": 46084,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 97452,
-   "harm_hotspots_lgbm": 89175,
+   "harm_hotspots_lgbm": 89588,
    "harm_lo": 28280,
    "harm_hi": 157533
   },
@@ -205,8 +231,9 @@
    "hotspots_MODIS": 41158,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 84899,
-   "harm_hotspots_lgbm": 78258,
+   "harm_hotspots_lgbm": 78486,
    "harm_lo": 24849,
    "harm_hi": 139590
   },
@@ -214,8 +241,9 @@
    "hotspots_MODIS": 54163,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 117765,
-   "harm_hotspots_lgbm": 103438,
+   "harm_hotspots_lgbm": 103338,
    "harm_lo": 36588,
    "harm_hi": 184961
   },
@@ -223,17 +251,19 @@
    "hotspots_MODIS": 39749,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 83106,
-   "harm_hotspots_lgbm": 76278,
+   "harm_hotspots_lgbm": 76490,
    "harm_lo": 22249,
-   "harm_hi": 139945
+   "harm_hi": 139944
   },
   "2010": {
    "hotspots_MODIS": 33105,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 67133,
-   "harm_hotspots_lgbm": 65486,
+   "harm_hotspots_lgbm": 65589,
    "harm_lo": 17372,
    "harm_hi": 115837
   },
@@ -241,8 +271,9 @@
    "hotspots_MODIS": 39566,
    "hotspots_SNPP": null,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 79455,
-   "harm_hotspots_lgbm": 75653,
+   "harm_hotspots_lgbm": 75858,
    "harm_lo": 22389,
    "harm_hi": 131888
   },
@@ -250,6 +281,7 @@
    "hotspots_MODIS": 33573,
    "hotspots_SNPP": 67586,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 67586,
    "harm_hotspots_lgbm": 67586,
    "harm_lo": 67586,
@@ -259,6 +291,7 @@
    "hotspots_MODIS": 34654,
    "hotspots_SNPP": 72193,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 72193,
    "harm_hotspots_lgbm": 72193,
    "harm_lo": 72193,
@@ -268,6 +301,7 @@
    "hotspots_MODIS": 19063,
    "hotspots_SNPP": 42006,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 42006,
    "harm_hotspots_lgbm": 42006,
    "harm_lo": 42006,
@@ -277,6 +311,7 @@
    "hotspots_MODIS": 25145,
    "hotspots_SNPP": 54706,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 54706,
    "harm_hotspots_lgbm": 54706,
    "harm_lo": 54706,
@@ -286,6 +321,7 @@
    "hotspots_MODIS": 28949,
    "hotspots_SNPP": 58489,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 58489,
    "harm_hotspots_lgbm": 58489,
    "harm_lo": 58489,
@@ -295,6 +331,7 @@
    "hotspots_MODIS": 30225,
    "hotspots_SNPP": 59362,
    "hotspots_NOAA20": null,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 59362,
    "harm_hotspots_lgbm": 59362,
    "harm_lo": 59362,
@@ -304,6 +341,7 @@
    "hotspots_MODIS": 27799,
    "hotspots_SNPP": 62408,
    "hotspots_NOAA20": 52285,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 62408,
    "harm_hotspots_lgbm": 62408,
    "harm_lo": 62408,
@@ -313,6 +351,7 @@
    "hotspots_MODIS": 26161,
    "hotspots_SNPP": 57909,
    "hotspots_NOAA20": 58504,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 57909,
    "harm_hotspots_lgbm": 57909,
    "harm_lo": 57909,
@@ -322,6 +361,7 @@
    "hotspots_MODIS": 58763,
    "hotspots_SNPP": 126239,
    "hotspots_NOAA20": 127946,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 126239,
    "harm_hotspots_lgbm": 126239,
    "harm_lo": 126239,
@@ -331,6 +371,7 @@
    "hotspots_MODIS": 29401,
    "hotspots_SNPP": 66548,
    "hotspots_NOAA20": 68541,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 66548,
    "harm_hotspots_lgbm": 66548,
    "harm_lo": 66548,
@@ -340,6 +381,7 @@
    "hotspots_MODIS": 35006,
    "hotspots_SNPP": 76948,
    "hotspots_NOAA20": 81770,
+   "hotspots_NOAA21": null,
    "harm_hotspots": 76948,
    "harm_hotspots_lgbm": 76948,
    "harm_lo": 76948,
@@ -349,6 +391,7 @@
    "hotspots_MODIS": 23345,
    "hotspots_SNPP": 50584,
    "hotspots_NOAA20": 50441,
+   "hotspots_NOAA21": 42747,
    "harm_hotspots": 50584,
    "harm_hotspots_lgbm": 50584,
    "harm_lo": 50584,
@@ -358,19 +401,31 @@
    "hotspots_MODIS": 26356,
    "hotspots_SNPP": 51941,
    "hotspots_NOAA20": 57108,
+   "hotspots_NOAA21": 56503,
    "harm_hotspots": 51941,
    "harm_hotspots_lgbm": 51941,
    "harm_lo": 51941,
    "harm_hi": 51941
   },
   "2025": {
-   "hotspots_MODIS": 25411,
+   "hotspots_MODIS": 25412,
    "hotspots_SNPP": 56557,
    "hotspots_NOAA20": 58079,
+   "hotspots_NOAA21": 58365,
    "harm_hotspots": 56557,
    "harm_hotspots_lgbm": 56557,
    "harm_lo": 56557,
    "harm_hi": 56557
+  },
+  "2026": {
+   "hotspots_MODIS": 13783,
+   "hotspots_SNPP": 33015,
+   "hotspots_NOAA20": 37199,
+   "hotspots_NOAA21": 36681,
+   "harm_hotspots": 35254,
+   "harm_hotspots_lgbm": 35254,
+   "harm_lo": 35254,
+   "harm_hi": 35254
   }
  },
  "k_national_by_month": {

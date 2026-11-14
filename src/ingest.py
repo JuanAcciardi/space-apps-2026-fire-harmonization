@@ -26,7 +26,7 @@ def main() -> None:
            CASE WHEN confidence < 30 THEN 'l' WHEN confidence < 80 THEN 'n' ELSE 'h' END AS confidence,
            version::VARCHAR AS version
     FROM read_csv('{raw}/modis_*_{C.COUNTRY}.csv', union_by_name=true,
-                  types={{'acq_time':'VARCHAR','confidence':'BIGINT','version':'VARCHAR','type':'BIGINT'}})
+                  types={{'acq_time':'VARCHAR','confidence':'BIGINT','version':'VARCHAR','type':'DOUBLE'}})
     """
     viirs = f"""
     SELECT latitude, longitude,
@@ -38,7 +38,7 @@ def main() -> None:
            lower(confidence)[1:1] AS confidence,
            version::VARCHAR AS version
     FROM read_csv('{raw}/viirs-*_{C.COUNTRY}.csv', union_by_name=true,
-                  types={{'acq_time':'VARCHAR','confidence':'VARCHAR','version':'VARCHAR','type':'BIGINT'}})
+                  types={{'acq_time':'VARCHAR','confidence':'VARCHAR','version':'VARCHAR','type':'DOUBLE'}})
     """
     con.execute(f"""
     COPY (

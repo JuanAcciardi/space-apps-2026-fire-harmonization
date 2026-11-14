@@ -70,6 +70,7 @@
     return { harm, modis: sum(mo.modis), snpp: sum(mo.snpp), noaa20: sum(mo.noaa20), noaa21: sum(mo.noaa21), joined: sum(mo.joined), lo, hi, modelled };
   }
   function monthIdx(y, m) { return (y - Y0) * 12 + m; }
+  function monthsOf(y, m) { return (m < 0 ? Array.from({ length: 12 }, (_, k) => monthIdx(y, k)) : [monthIdx(y, m)]).filter((mi) => mi >= 0 && mi < NM); }
   function median(arr) { const a = arr.filter((v) => v != null).sort((x, y) => x - y); if (!a.length) return null; const k = a.length >> 1; return a.length % 2 ? a[k] : (a[k - 1] + a[k]) / 2; }
 
   // ---------- state --------------------------------------------------------------------------
@@ -104,7 +105,7 @@
   const SRC_NAME = ['no data', 'S-NPP observed', 'NOAA-20 scaled', 'MODIS × k', 'Terra-only, bridged × k', 'NOAA-21 scaled'];
 
   function cellValue(ci, layer = state.layer) {
-    const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
+    const months = monthsOf(state.year, state.month);
     if (layer === 'src') { const c = [0, 0, 0, 0, 0, 0]; months.forEach((mi) => c[S.src.a[ci * NM + mi]]++); return c.indexOf(Math.max(...c)); }
     if (layer === 'k') { let m = 0, h = 0; months.forEach((mi) => { const mm = val('hs_modis', ci, mi), hh = val('hs_harm', ci, mi); if (mm != null && hh != null && S.src.a[ci * NM + mi] >= 3) { m += mm; h += hh; } }); return m > 0 ? h / m : null; }
     const name = { harm: 'hs_harm', modis: 'hs_modis', snpp: 'hs_snpp', noaa20: 'hs_noaa20', noaa21: 'hs_noaa21' }[layer];
@@ -170,7 +171,7 @@
     const c = meta.cells[ci]; const d = document.createElement('div');
     const title = document.createElement('div'); title.textContent = (meta.provinces[c.p] || 'offshore') + ' · cell ' + c.h.slice(0, 7); title.className = 'muted'; d.append(title);
     const rows = [['hs_harm', 'harmonized', css('--harm')], ['hs_modis', 'MODIS raw', css('--modis')], ['hs_snpp', 'S-NPP raw', css('--snpp')], ['hs_noaa20', 'NOAA-20 raw', css('--noaa20')], ['hs_noaa21', 'NOAA-21 raw', css('--noaa21')]];
-    const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
+    const months = monthsOf(state.year, state.month);
     for (const [name, label, col] of rows) {
       let t = null; months.forEach((mi) => { const v = val(name, ci, mi); if (v != null) t = (t || 0) + v; });
       const r = document.createElement('div'); r.className = 'row'; const k = document.createElement('span'); k.className = 'key'; k.style.background = col;
@@ -207,15 +208,15 @@
   }
   function chartCalendar(mo) {
     const series = state.raw ? mo.joined : mo.harm;
-    const z = YEARS.map((y) => MONTHS.map((_, m) => series[monthIdx(y, m)]));
-    const text = YEARS.map((y) => MONTHS.map((_, m) => { const mi = monthIdx(y, m); const sm = mo.src[mi]; const dom = sm.indexOf(Math.max(...sm)); return `${MONTHS[m]} ${y}<br><b>${fmt(series[mi], 0)}</b> hot spots<br>${state.raw ? 'raw, ' + (mo.snpp[mi] != null ? 'S-NPP' : 'MODIS') : SRC_NAME[dom]}${!state.raw && mo.modelled[mi] > 0 ? `<br>90% band ${fmt(mo.lo[mi], 0)}–${fmt(mo.hi[mi], 0)}` : ''}`; }));
+    const z = YEARS.map((y) => MONTHS.map((_, m) => (monthIdx(y, m) < NM ? series[monthIdx(y, m)] : null)));
+    const text = YEARS.map((y) => MONTHS.map((_, m) => { const mi = monthIdx(y, m); if (mi >= NM) return `${MONTHS[m]} ${y}<br>not yet`; const sm = mo.src[mi]; const dom = sm.indexOf(Math.max(...sm)); return `${MONTHS[m]} ${y}<br><b>${fmt(series[mi], 0)}</b> hot spots<br>${state.raw ? 'raw, ' + (mo.snpp[mi] != null ? 'S-NPP' : 'MODIS') : SRC_NAME[dom]}${!state.raw && mo.modelled[mi] > 0 ? `<br>90% band ${fmt(mo.lo[mi], 0)}–${fmt(mo.hi[mi], 0)}` : ''}`; }));
     const lay = base(); lay.margin.l = 44; lay.hovermode = 'closest'; lay.yaxis = { autorange: 'reversed', tickfont: { color: css('--muted') }, dtick: 2, gridcolor: 'rgba(0,0,0,0)' }; lay.xaxis.side = 'top'; lay.margin.t = 24; lay.margin.b = 8;
     Plotly.react('chart-calendar', [{ type: 'heatmap', x: MONTHS, y: YEARS, z, text, hoverinfo: 'text', xgap: 2, ygap: 2, colorscale: [[0, ramp(0)], [0.5, ramp(0.5)], [1, ramp(1)]], showscale: true, colorbar: { thickness: 8, len: 0.9, outlinewidth: 0, tickfont: { color: css('--muted'), size: 11 } }, zmin: 0 }], lay, CFG);
   }
   function chartSeason(mo) {
     const full = YEARS.filter((y) => !(y === LAST_YEAR && meta.last_day));
     const med = MONTHS.map((_, m) => median(full.map((y) => mo.harm[monthIdx(y, m)])));
-    const sel = MONTHS.map((_, m) => mo.harm[monthIdx(state.year, m)]);
+    const sel = MONTHS.map((_, m) => (monthIdx(state.year, m) < NM ? mo.harm[monthIdx(state.year, m)] : null));
     const lay = base(); lay.hovermode = 'x unified'; lay.yaxis.title = { text: 'hot spots / month', font: { size: 12 } }; lay.bargap = 0.35;
     Plotly.react('chart-season', [
       { type: 'bar', x: MONTHS, y: med, name: `Median month ${full[0]}–${full[full.length - 1]}`, marker: { color: css('--band'), line: { width: 0 } } },
@@ -263,14 +264,20 @@
 
   function renderTiles(mo, an) {
     const yi = YEARS.indexOf(state.year);
-    let cur, lo, hi, normal, hist;
-    if (state.month < 0) { cur = an.harm[yi]; lo = an.lo[yi]; hi = an.hi[yi]; hist = an.harm; }
-    else { const mi = monthIdx(state.year, state.month); cur = mo.harm[mi]; lo = mo.lo[mi]; hi = mo.hi[mi]; hist = YEARS.map((y) => mo.harm[monthIdx(y, state.month)]); }
+    let cur, lo, hi, normal, hist, ytdNote = '';
+    if (state.month < 0 && state.year === LAST_YEAR && meta.last_day) {
+      // partial year: compare the same Jan..last-month window in every year, not a full year
+      const lastM = (NM - 1) % 12;
+      const win = (y) => { let t = null; for (let m = 0; m <= lastM; m++) { const mi = monthIdx(y, m); if (mi < NM && mo.harm[mi] != null) t = (t || 0) + mo.harm[mi]; } return t; };
+      hist = YEARS.map(win); cur = win(state.year); lo = an.lo[yi]; hi = an.hi[yi];
+      ytdNote = ` · Jan–${MONTHS[lastM]} window`;
+    } else if (state.month < 0) { cur = an.harm[yi]; lo = an.lo[yi]; hi = an.hi[yi]; hist = an.harm; }
+    else { const mi = monthIdx(state.year, state.month); const ok = mi < NM; cur = ok ? mo.harm[mi] : null; lo = ok ? mo.lo[mi] : null; hi = ok ? mo.hi[mi] : null; hist = YEARS.map((y) => monthIdx(y, state.month) < NM ? mo.harm[monthIdx(y, state.month)] : null); }
     normal = median(hist.filter((v, i) => !(YEARS[i] === LAST_YEAR && meta.last_day)));
     $('hero-label').textContent = `Hot spots, ${periodLabel()}`;
     $('hero-value').textContent = fmt(cur);
     $('hero-sub').textContent = lo !== hi ? `90% band ${fmt(lo)}–${fmt(hi)} (pre-2012 is modelled)` : 'observed by VIIRS';
-    const rank = hist.filter((v) => v != null && v > cur).length + 1;
+    const rank = cur == null ? null : hist.filter((v) => v != null && v > cur).length + 1;
     // critical period: shortest run of calendar months (circular) holding >= 2/3 of a median year's fire
     const fullYears = YEARS.filter((y) => !(y === LAST_YEAR && meta.last_day));
     const med = MONTHS.map((_, m) => median(fullYears.map((y) => mo.harm[monthIdx(y, m)])) || 0);
@@ -279,10 +286,10 @@
     if (totMed > 0) for (let len = 1; len <= 12 && !best; len++) for (let s0 = 0; s0 < 12; s0++) { let acc = 0; for (let k = 0; k < len; k++) acc += med[(s0 + k) % 12]; if (acc / totMed >= 2 / 3) { best = { s0, len, share: acc / totMed }; break; } }
     $('crit-value').textContent = best ? (best.len === 12 ? 'all year' : best.len === 1 ? MONTHS[best.s0] : `${MONTHS[best.s0]}–${MONTHS[(best.s0 + best.len - 1) % 12]}`) : '–';
     $('crit-sub').textContent = best ? `${best.len} month${best.len > 1 ? 's' : ''} hold ${Math.round(100 * best.share)}% of a normal year's fire` : 'not enough fire to define';
-    const pct = normal > 0 ? Math.round(100 * (cur / normal - 1)) : null;
-    $('anom-value').textContent = pct == null ? '–' : (pct >= 0 ? '+' : '') + pct + '%';
-    $('anom-sub').textContent = `rank ${rank} of ${YEARS.length} ${state.month < 0 ? 'years' : MONTHS[state.month] + 's'} · normal ${fmt(normal)}`;
-    const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
+    const pct = normal > 0 && cur != null ? Math.round(100 * (cur / normal - 1)) : null;
+    $('anom-value').textContent = pct == null || cur == null ? '–' : (pct >= 0 ? '+' : '') + pct + '%';
+    $('anom-sub').textContent = cur == null ? 'no data yet for this month' : `rank ${rank} of ${YEARS.length} ${state.month < 0 ? 'years' : MONTHS[state.month] + 's'} · normal ${fmt(normal)}${ytdNote}`;
+    const months = monthsOf(state.year, state.month);
     const mix = [0, 0, 0, 0, 0, 0]; months.forEach((mi) => mo.src[mi].forEach((n, k) => (mix[k] += n)));
     const tot = mix.slice(1).reduce((a, b) => a + b, 0) || 1;
     const bar = $('src-bar'); bar.textContent = '';
