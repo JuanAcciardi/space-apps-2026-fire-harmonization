@@ -1,0 +1,518 @@
+{
+ "terra_only_bridge_national_by_month": {
+  "1": 1.859,
+  "2": 2.007,
+  "3": 2.298,
+  "4": 2.895,
+  "5": 3.625,
+  "6": 4.295,
+  "7": 3.955,
+  "8": 3.055,
+  "9": 2.343,
+  "10": 2.101,
+  "11": 1.87,
+  "12": 1.819
+ },
+ "noaa20_over_snpp_by_year": {
+  "hotspots": {
+   "2018": 1.041,
+   "2019": 1.01,
+   "2020": 1.014,
+   "2021": 1.03,
+   "2022": 1.063,
+   "2023": 0.997,
+   "2024": 1.099,
+   "2025": 1.027
+  },
+  "frp": {
+   "2018": 0.9,
+   "2019": 1.048,
+   "2020": 0.978,
+   "2021": 1.017,
+   "2022": 0.981,
+   "2023": 0.911,
+   "2024": 0.996,
+   "2025": 1.011
+  }
+ },
+ "noaa20_to_snpp_factor": {
+  "hotspots": 0.9681,
+  "frp": 1.0193
+ },
+ "backtest_2012_2015": {
+  "cell_month": [
+   {
+    "method": "raw MODIS (no harmonization)",
+    "total_bias_pct": -52.46,
+    "wape_pct": 60.8,
+    "rmse": 4.78,
+    "n_rows": 97344,
+    "n_rows_fire": 32838
+   },
+   {
+    "method": "ratio shrunk",
+    "total_bias_pct": 0.0,
+    "wape_pct": 49.3,
+    "rmse": 3.33,
+    "n_rows": 97344,
+    "n_rows_fire": 32838
+   },
+   {
+    "method": "lightgbm poisson",
+    "total_bias_pct": 1.74,
+    "wape_pct": 44.4,
+    "rmse": 2.81,
+    "n_rows": 97344,
+    "n_rows_fire": 32838
+   }
+  ],
+  "national_annual": {
+   "2012": {
+    "y_hs": 67586,
+    "pred_raw": 33573,
+    "pred_ratio": 71521,
+    "pred_lgbm": 69753
+   },
+   "2013": {
+    "y_hs": 72193,
+    "pred_raw": 34654,
+    "pred_ratio": 72212,
+    "pred_lgbm": 69672
+   },
+   "2014": {
+    "y_hs": 42006,
+    "pred_raw": 19063,
+    "pred_ratio": 39406,
+    "pred_lgbm": 45523
+   },
+   "2015": {
+    "y_hs": 54706,
+    "pred_raw": 25145,
+    "pred_ratio": 53359,
+    "pred_lgbm": 55670
+   }
+  },
+  "cell_4yr_fire_weighted_abs_err_pred_ratio": 0.154,
+  "cell_4yr_median_abs_err_pred_ratio": 0.167,
+  "cell_4yr_fire_weighted_abs_err_pred_lgbm": 0.134,
+  "cell_4yr_median_abs_err_pred_lgbm": 0.14
+ },
+ "lgbm_feature_gain": {
+  "hotspots": 13842739.0,
+  "n_det": 73068.5,
+  "frp": 550089.8,
+  "fire_days": 1359934.5,
+  "night_share": 20187.2,
+  "frp_per_det": 1042617.6,
+  "mcal": 60050.9,
+  "lat": 436581.1,
+  "lon": 564529.5,
+  "modis_clim": 1050415.8,
+  "log_hs": 222194.3
+ },
+ "uncertainty_ratio_quantiles_by_pred_bin": {
+  "(0.0, 2.0]": [
+   0.0,
+   3.624
+  ],
+  "(2.0, 5.0]": [
+   0.0,
+   2.692
+  ],
+  "(5.0, 10.0]": [
+   0.0,
+   2.114
+  ],
+  "(10.0, 25.0]": [
+   0.142,
+   1.772
+  ],
+  "(25.0, 50.0]": [
+   0.418,
+   1.456
+  ],
+  "(50.0, 100.0]": [
+   0.48,
+   1.279
+  ],
+  "(100.0, 1000000000.0]": [
+   0.398,
+   1.126
+  ]
+ },
+ "seam_2012_national": {
+  "raw_joined_post_over_pre": 1.502,
+  "harmonized_post_over_pre": 0.735,
+  "harmonized_lgbm_post_over_pre": 0.777,
+  "modis_only_post_over_pre": 0.701
+ },
+ "national_annual": {
+  "2001": {
+   "hotspots_MODIS": 15439,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 78612,
+   "harm_hotspots_lgbm": 103772,
+   "harm_lo": 24654,
+   "harm_hi": 119030
+  },
+  "2002": {
+   "hotspots_MODIS": 30722,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 94548,
+   "harm_hotspots_lgbm": 97571,
+   "harm_lo": 28322,
+   "harm_hi": 148374
+  },
+  "2003": {
+   "hotspots_MODIS": 60000,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 124520,
+   "harm_hotspots_lgbm": 108571,
+   "harm_lo": 39366,
+   "harm_hi": 191789
+  },
+  "2004": {
+   "hotspots_MODIS": 53529,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 114784,
+   "harm_hotspots_lgbm": 100509,
+   "harm_lo": 35776,
+   "harm_hi": 180750
+  },
+  "2005": {
+   "hotspots_MODIS": 38291,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 79903,
+   "harm_hotspots_lgbm": 73795,
+   "harm_lo": 20799,
+   "harm_hi": 136542
+  },
+  "2006": {
+   "hotspots_MODIS": 46084,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 97452,
+   "harm_hotspots_lgbm": 89175,
+   "harm_lo": 28280,
+   "harm_hi": 157533
+  },
+  "2007": {
+   "hotspots_MODIS": 41158,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 84899,
+   "harm_hotspots_lgbm": 78258,
+   "harm_lo": 24849,
+   "harm_hi": 139590
+  },
+  "2008": {
+   "hotspots_MODIS": 54163,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 117765,
+   "harm_hotspots_lgbm": 103438,
+   "harm_lo": 36588,
+   "harm_hi": 184961
+  },
+  "2009": {
+   "hotspots_MODIS": 39749,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 83106,
+   "harm_hotspots_lgbm": 76278,
+   "harm_lo": 22249,
+   "harm_hi": 139945
+  },
+  "2010": {
+   "hotspots_MODIS": 33105,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 67133,
+   "harm_hotspots_lgbm": 65486,
+   "harm_lo": 17372,
+   "harm_hi": 115837
+  },
+  "2011": {
+   "hotspots_MODIS": 39566,
+   "hotspots_SNPP": null,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 79455,
+   "harm_hotspots_lgbm": 75653,
+   "harm_lo": 22389,
+   "harm_hi": 131888
+  },
+  "2012": {
+   "hotspots_MODIS": 33573,
+   "hotspots_SNPP": 67586,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 67586,
+   "harm_hotspots_lgbm": 67586,
+   "harm_lo": 67586,
+   "harm_hi": 67586
+  },
+  "2013": {
+   "hotspots_MODIS": 34654,
+   "hotspots_SNPP": 72193,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 72193,
+   "harm_hotspots_lgbm": 72193,
+   "harm_lo": 72193,
+   "harm_hi": 72193
+  },
+  "2014": {
+   "hotspots_MODIS": 19063,
+   "hotspots_SNPP": 42006,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 42006,
+   "harm_hotspots_lgbm": 42006,
+   "harm_lo": 42006,
+   "harm_hi": 42006
+  },
+  "2015": {
+   "hotspots_MODIS": 25145,
+   "hotspots_SNPP": 54706,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 54706,
+   "harm_hotspots_lgbm": 54706,
+   "harm_lo": 54706,
+   "harm_hi": 54706
+  },
+  "2016": {
+   "hotspots_MODIS": 28949,
+   "hotspots_SNPP": 58489,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 58489,
+   "harm_hotspots_lgbm": 58489,
+   "harm_lo": 58489,
+   "harm_hi": 58489
+  },
+  "2017": {
+   "hotspots_MODIS": 30225,
+   "hotspots_SNPP": 59362,
+   "hotspots_NOAA20": null,
+   "harm_hotspots": 59362,
+   "harm_hotspots_lgbm": 59362,
+   "harm_lo": 59362,
+   "harm_hi": 59362
+  },
+  "2018": {
+   "hotspots_MODIS": 27799,
+   "hotspots_SNPP": 62408,
+   "hotspots_NOAA20": 52285,
+   "harm_hotspots": 62408,
+   "harm_hotspots_lgbm": 62408,
+   "harm_lo": 62408,
+   "harm_hi": 62408
+  },
+  "2019": {
+   "hotspots_MODIS": 26161,
+   "hotspots_SNPP": 57909,
+   "hotspots_NOAA20": 58504,
+   "harm_hotspots": 57909,
+   "harm_hotspots_lgbm": 57909,
+   "harm_lo": 57909,
+   "harm_hi": 57909
+  },
+  "2020": {
+   "hotspots_MODIS": 58763,
+   "hotspots_SNPP": 126239,
+   "hotspots_NOAA20": 127946,
+   "harm_hotspots": 126239,
+   "harm_hotspots_lgbm": 126239,
+   "harm_lo": 126239,
+   "harm_hi": 126239
+  },
+  "2021": {
+   "hotspots_MODIS": 29401,
+   "hotspots_SNPP": 66548,
+   "hotspots_NOAA20": 68541,
+   "harm_hotspots": 66548,
+   "harm_hotspots_lgbm": 66548,
+   "harm_lo": 66548,
+   "harm_hi": 66548
+  },
+  "2022": {
+   "hotspots_MODIS": 35006,
+   "hotspots_SNPP": 76948,
+   "hotspots_NOAA20": 81770,
+   "harm_hotspots": 76948,
+   "harm_hotspots_lgbm": 76948,
+   "harm_lo": 76948,
+   "harm_hi": 76948
+  },
+  "2023": {
+   "hotspots_MODIS": 23345,
+   "hotspots_SNPP": 50584,
+   "hotspots_NOAA20": 50441,
+   "harm_hotspots": 50584,
+   "harm_hotspots_lgbm": 50584,
+   "harm_lo": 50584,
+   "harm_hi": 50584
+  },
+  "2024": {
+   "hotspots_MODIS": 26356,
+   "hotspots_SNPP": 51941,
+   "hotspots_NOAA20": 57108,
+   "harm_hotspots": 51941,
+   "harm_hotspots_lgbm": 51941,
+   "harm_lo": 51941,
+   "harm_hi": 51941
+  },
+  "2025": {
+   "hotspots_MODIS": 25411,
+   "hotspots_SNPP": 56557,
+   "hotspots_NOAA20": 58079,
+   "harm_hotspots": 56557,
+   "harm_hotspots_lgbm": 56557,
+   "harm_lo": 56557,
+   "harm_hi": 56557
+  }
+ },
+ "k_national_by_month": {
+  "1": 1.837,
+  "2": 2.25,
+  "3": 2.545,
+  "4": 2.65,
+  "5": 2.675,
+  "6": 2.586,
+  "7": 2.219,
+  "8": 1.996,
+  "9": 1.98,
+  "10": 2.122,
+  "11": 2.149,
+  "12": 2.074
+ },
+ "k_frp_national_by_month": {
+  "1": 0.587,
+  "2": 0.727,
+  "3": 0.837,
+  "4": 0.939,
+  "5": 1.003,
+  "6": 0.943,
+  "7": 0.819,
+  "8": 0.738,
+  "9": 0.659,
+  "10": 0.66,
+  "11": 0.693,
+  "12": 0.602
+ },
+ "aggregate_uncertainty_lookup": [
+  {
+   "pred_min": 1.0,
+   "pred_max": 2.0,
+   "n": 2581,
+   "q05": 0.0,
+   "q50": 0.662,
+   "q95": 3.774
+  },
+  {
+   "pred_min": 2.0,
+   "pred_max": 4.0,
+   "n": 7862,
+   "q05": 0.0,
+   "q50": 0.71,
+   "q95": 2.964
+  },
+  {
+   "pred_min": 4.0,
+   "pred_max": 8.0,
+   "n": 5944,
+   "q05": 0.0,
+   "q50": 0.725,
+   "q95": 2.333
+  },
+  {
+   "pred_min": 8.0,
+   "pred_max": 16.0,
+   "n": 4536,
+   "q05": 0.093,
+   "q50": 0.844,
+   "q95": 1.988
+  },
+  {
+   "pred_min": 16.0,
+   "pred_max": 32.0,
+   "n": 3298,
+   "q05": 0.254,
+   "q50": 0.904,
+   "q95": 1.723
+  },
+  {
+   "pred_min": 32.0,
+   "pred_max": 64.0,
+   "n": 1958,
+   "q05": 0.342,
+   "q50": 0.93,
+   "q95": 1.513
+  },
+  {
+   "pred_min": 64.0,
+   "pred_max": 128.0,
+   "n": 1112,
+   "q05": 0.537,
+   "q50": 0.955,
+   "q95": 1.493
+  },
+  {
+   "pred_min": 128.0,
+   "pred_max": 256.0,
+   "n": 586,
+   "q05": 0.668,
+   "q50": 0.984,
+   "q95": 1.315
+  },
+  {
+   "pred_min": 256.0,
+   "pred_max": 512.0,
+   "n": 243,
+   "q05": 0.634,
+   "q50": 0.932,
+   "q95": 1.249
+  },
+  {
+   "pred_min": 512.0,
+   "pred_max": 1024.0,
+   "n": 117,
+   "q05": 0.361,
+   "q50": 1.006,
+   "q95": 1.277
+  },
+  {
+   "pred_min": 1024.0,
+   "pred_max": 2048.0,
+   "n": 66,
+   "q05": 0.804,
+   "q50": 1.026,
+   "q95": 1.208
+  },
+  {
+   "pred_min": 2048.0,
+   "pred_max": 4096.0,
+   "n": 39,
+   "q05": 0.749,
+   "q50": 0.99,
+   "q95": 1.099
+  },
+  {
+   "pred_min": 4096.0,
+   "pred_max": 8192.0,
+   "n": 27,
+   "q05": 0.771,
+   "q50": 1.048,
+   "q95": 1.171
+  },
+  {
+   "pred_min": 8192.0,
+   "pred_max": 1000000000.0,
+   "n": 20,
+   "q05": 0.922,
+   "q50": 1.014,
+   "q95": 1.101
+  }
+ ]
+}

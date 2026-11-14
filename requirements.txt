@@ -1,0 +1,17 @@
+pandas>=2.2
+numpy
+pyarrow
+duckdb
+scikit-learn
+lightgbm
+scipy
+matplotlib
+plotly
+folium
+geopandas
+shapely
+pyproj
+h3
+requests
+tqdm
+jupyter
