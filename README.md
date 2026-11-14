@@ -4,6 +4,8 @@ NASA Space Apps Challenge 2026 (Nov 14–15) · Challenge written by CONAE: *Har
 
 **Team LMA** — Juan Ignacio Acciardi, Verónica Ana López Marsico.
 
+> **Para continuar la entrega (demo, textos, formulario): [docs/PROXIMOS_PASOS.md](docs/PROXIMOS_PASOS.md).** Cierre: domingo 15/11, 23:59 hora de la sede.
+
 **Web app:** https://juanacciardi.github.io/space-apps-2026-fire-harmonization/ · Official challenge text: [docs/challenge.md](docs/challenge.md) · Submission texts: [docs/submission.md](docs/submission.md)
 
 **Goal.** Turn 25 years of NASA FIRMS active-fire detections (MODIS Terra/Aqua, 1 km, since 2000; VIIRS S-NPP / NOAA-20, 375 m, since 2012) into **one consistent burning-activity record** for any area of interest in Argentina, and show it as a **burning activity calendar** in a web app.
