@@ -27,7 +27,7 @@ SAT_START = {
     "Aqua": "2002-07-04",
     "SNPP": "2012-01-20",
     "NOAA20": "2018-01-01",
-    "NOAA21": "2023-01-01",
+    "NOAA21": "2023-03-01",
 }
 SAT_END = {"SNPP": "2026-11-02"}
 
@@ -39,4 +39,5 @@ OVERLAP_START, OVERLAP_END = "2012-02-01", "2025-12-31"
 # Años de validación hacia atrás (se ajusta sin ellos y se predice sobre ellos)
 BACKTEST_YEARS = (2012, 2013, 2014, 2015)
 
-MONTH_START, MONTH_END = "2001-01-01", "2025-12-01"
+MONTH_START, MONTH_END = "2001-01-01", "2026-11-01"
+LAST_DAY = "2026-11-14"           # último día con datos (NRT); el último mes es parcial

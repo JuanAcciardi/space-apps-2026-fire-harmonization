@@ -11,8 +11,8 @@
 <body>
 <header class="top">
   <div class="brand">
-    <h1>Burning Activity Calendar <span class="muted">· Argentina 2001–2025</span></h1>
-    <p class="tagline">MODIS (1 km, 2001–) and VIIRS (375 m, 2012–) hot spots from NASA FIRMS, harmonized into one record on the VIIRS scale. Pick a province, draw a box or click a cell.</p>
+    <h1>Burning Activity Calendar <span class="muted">· Argentina 2001–2026</span></h1>
+    <p class="tagline">MODIS (1 km, 2001–) and VIIRS (375 m, 2012–) hot spots from NASA FIRMS, harmonized into one record on the VIIRS scale, updated to <span id="last-day">today</span>. Pick a province, draw a box or click a cell.</p>
   </div>
   <nav class="tabs" role="tablist">
     <button class="tab active" data-tab="explore" role="tab">Explore</button>
@@ -28,7 +28,7 @@
   <button id="draw-btn" class="btn" title="Draw a rectangle on the map">Draw box</button>
   <button id="clear-btn" class="btn ghost" title="Back to all of Argentina">Reset</button>
   <span class="sep"></span>
-  <label>Year <input id="year" type="range" min="2001" max="2025" value="2025" step="1"> <output id="year-out">2025</output></label>
+  <label>Year <input id="year" type="range" min="2001" max="2026" value="2026" step="1"> <output id="year-out">2026</output></label>
   <label>Month
     <select id="month">
       <option value="-1">Whole year</option>
@@ -44,6 +44,7 @@
       <option value="modis">MODIS raw</option>
       <option value="snpp">VIIRS S-NPP raw</option>
       <option value="noaa20">VIIRS NOAA-20 raw</option>
+      <option value="noaa21">VIIRS NOAA-21 raw</option>
       <option value="k">Factor k = VIIRS / MODIS</option>
       <option value="src">Source of value</option>
     </select>
@@ -64,7 +65,8 @@
     </div>
     <div class="tiles">
       <div class="tile"><div class="tile-label" id="hero-label">Hot spots, 2025</div><div class="hero" id="hero-value">–</div><div class="tile-sub" id="hero-sub"></div></div>
-      <div class="tile"><div class="tile-label">vs normal (median 2001–2025)</div><div class="hero" id="anom-value">–</div><div class="tile-sub" id="anom-sub"></div></div>
+      <div class="tile"><div class="tile-label">vs normal (median of all years)</div><div class="hero" id="anom-value">–</div><div class="tile-sub" id="anom-sub"></div></div>
+      <div class="tile"><div class="tile-label">Critical period (normal year)</div><div class="hero" id="crit-value">–</div><div class="tile-sub" id="crit-sub"></div></div>
       <div class="tile"><div class="tile-label">Where the number comes from</div><div class="src-bar" id="src-bar"></div><div class="tile-sub" id="src-sub"></div></div>
     </div>
 
@@ -79,7 +81,7 @@
     </section>
 
     <section class="card">
-      <h3>Seasonality <span class="muted">· median month 2001–2025 vs selected year</span></h3>
+      <h3>Seasonality <span class="muted">· median month over all years vs selected year</span></h3>
       <div id="chart-season" class="chart"></div>
     </section>
 
@@ -107,7 +109,7 @@
       <div class="tile"><div class="tile-label">Harmonized record</div><div class="hero" id="seam-harm">–</div><div class="tile-sub">what the fires did</div></div>
       <div class="tile"><div class="tile-label">MODIS alone (control)</div><div class="hero" id="seam-modis">–</div><div class="tile-sub">same satellites on both sides</div></div>
     </div>
-    <p>Why it matters now: NASA FIRMS stopped producing Suomi NPP data on 2 November 2026, and the Terra and Aqua MODIS missions end in 2027. Every long fire record is about to cross another seam. The method here ties the sensors together so the record stays usable for early warning, fire management and science.</p>
+    <p>Why it matters now: NASA FIRMS stopped producing Suomi NPP data on 2 November 2026, and the Terra and Aqua MODIS missions end in 2027. Every long fire record is about to cross another seam. The record above already crosses it: from November 2026 the harmonized value comes from NOAA-20 scaled to the S-NPP reference, and NOAA-21 stands ready behind it. The method ties the sensors together so the record stays usable for early warning, fire management and science.</p>
   </div>
 </main>
 
@@ -132,7 +134,7 @@
   </div>
 </main>
 
-<footer class="foot muted">NASA Space Apps Challenge 2026 · Challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE) · Hot spots are satellite thermal anomalies, not confirmed wildfires. Absence of detection is not absence of fire (clouds, overpass gaps). <span id="generated"></span></footer>
+<footer class="foot muted">NASA Space Apps Challenge 2026 · Team <strong>LMA</strong> (Juan Ignacio Acciardi, Verónica Ana López Marsico) · Challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE) · <a href="https://github.com/JuanAcciardi/space-apps-2026-fire-harmonization">Code &amp; method</a> · Hot spots are satellite thermal anomalies, not confirmed wildfires. Absence of detection is not absence of fire (clouds, overpass gaps). <span id="generated"></span></footer>
 
 <div id="tooltip" class="tooltip" role="status" aria-live="polite" hidden></div>
 

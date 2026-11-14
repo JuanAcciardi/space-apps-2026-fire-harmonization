@@ -26,7 +26,7 @@ def main() -> None:
            CASE WHEN confidence < 30 THEN 'l' WHEN confidence < 80 THEN 'n' ELSE 'h' END AS confidence,
            version::VARCHAR AS version
     FROM read_csv('{raw}/modis_*_{C.COUNTRY}.csv', union_by_name=true,
-                  types={{'acq_time':'VARCHAR','confidence':'BIGINT','version':'VARCHAR'}})
+                  types={{'acq_time':'VARCHAR','confidence':'BIGINT','version':'VARCHAR','type':'BIGINT'}})
     """
     viirs = f"""
     SELECT latitude, longitude,
@@ -35,10 +35,10 @@ def main() -> None:
            acq_date, acq_time,
            bright_ti4 AS bright_main, bright_ti5 AS bright_aux, scan, track, frp, daynight, type,
            NULL::BIGINT AS confidence_num,
-           confidence,
+           lower(confidence)[1:1] AS confidence,
            version::VARCHAR AS version
     FROM read_csv('{raw}/viirs-*_{C.COUNTRY}.csv', union_by_name=true,
-                  types={{'acq_time':'VARCHAR','confidence':'VARCHAR','version':'VARCHAR'}})
+                  types={{'acq_time':'VARCHAR','confidence':'VARCHAR','version':'VARCHAR','type':'BIGINT'}})
     """
     con.execute(f"""
     COPY (
@@ -52,7 +52,7 @@ def main() -> None:
              CASE satellite WHEN 'Terra' THEN 'MODIS' WHEN 'Aqua' THEN 'MODIS' ELSE satellite END AS sensor_group,
              acq_utc,
              (acq_utc + INTERVAL ({C.UTC_OFFSET_HOURS}) HOUR)::DATE AS local_date,
-             bright_main, bright_aux, scan, track, frp, daynight, type::TINYINT AS type,
+             bright_main, bright_aux, scan, track, frp, daynight, coalesce(type,0)::TINYINT AS type,
              confidence, confidence_num, version,
              h3_latlng_to_cell(latitude, longitude, {C.H3_HOTSPOT}) AS h3_6,
              h3_latlng_to_cell(latitude, longitude, {C.H3_CELL}) AS h3_4,

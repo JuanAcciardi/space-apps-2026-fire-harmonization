@@ -20,7 +20,9 @@
     bins[name] = { a: new TYPES[s.dtype](buf), scale: s.scale, na: s.na, shape: s.shape };
     return bins[name];
   }
-  await Promise.all(['hs_modis', 'hs_snpp', 'hs_noaa20', 'hs_harm', 'hs_lo', 'hs_hi', 'src'].map(load));
+  await Promise.all(['hs_modis', 'hs_snpp', 'hs_noaa20', 'hs_noaa21', 'hs_harm', 'hs_lo', 'hs_hi', 'src'].filter((n) => meta.series[n]).map(load));
+  if (!bins.hs_noaa21) bins.hs_noaa21 = { a: new Int16Array(NC * NM).fill(-1), scale: 1, na: -1 };
+  const LAST_YEAR = YEARS[YEARS.length - 1];
   const S = bins;
   const val = (name, ci, mi) => { const b = S[name]; const v = b.a[ci * NM + mi]; return (v === b.na && name !== 'src') ? null : v / b.scale; };
   const cellIndex = new Map(meta.cells.map((c, i) => [c.h, i]));
@@ -38,14 +40,15 @@
   // ---------- aggregation ---------------------------------------------------------------------
   // monthly series for a set of cells: harm, modis, snpp, noaa20, modelled part, lo/hi, source mix
   function monthly(cells) {
-    const out = { harm: new Array(NM).fill(0), modis: new Array(NM).fill(null), snpp: new Array(NM).fill(null), noaa20: new Array(NM).fill(null),
-      modelled: new Array(NM).fill(0), lo: new Array(NM).fill(0), hi: new Array(NM).fill(0), src: Array.from({ length: NM }, () => [0, 0, 0, 0, 0]) };
+    const out = { harm: new Array(NM).fill(0), modis: new Array(NM).fill(null), snpp: new Array(NM).fill(null), noaa20: new Array(NM).fill(null), noaa21: new Array(NM).fill(null),
+      modelled: new Array(NM).fill(0), lo: new Array(NM).fill(0), hi: new Array(NM).fill(0), src: Array.from({ length: NM }, () => [0, 0, 0, 0, 0, 0]) };
     for (const ci of cells) {
       for (let mi = 0; mi < NM; mi++) {
         const h = val('hs_harm', ci, mi); if (h != null) out.harm[mi] += h;
         const m = val('hs_modis', ci, mi); if (m != null) out.modis[mi] = (out.modis[mi] || 0) + m;
         const s = val('hs_snpp', ci, mi); if (s != null) out.snpp[mi] = (out.snpp[mi] || 0) + s;
         const n = val('hs_noaa20', ci, mi); if (n != null) out.noaa20[mi] = (out.noaa20[mi] || 0) + n;
+        const n1 = val('hs_noaa21', ci, mi); if (n1 != null) out.noaa21[mi] = (out.noaa21[mi] || 0) + n1;
         const sc = S.src.a[ci * NM + mi]; out.src[mi][sc]++;
         if (sc >= 3 && h != null) out.modelled[mi] += h;
       }
@@ -56,7 +59,7 @@
       out.lo[mi] = obs + lo; out.hi[mi] = obs + hi;
     }
     // naive joined record: S-NPP where it exists, otherwise MODIS
-    out.joined = out.snpp.map((s, i) => (s != null ? s : out.modis[i]));
+    out.joined = out.snpp.map((s, i) => (s != null && meta.months[i] < meta.sensor_windows.SNPP[1].slice(0, 7) ? s : out.noaa20[i] != null ? out.noaa20[i] : out.modis[i]));
     return out;
   }
   function annual(mo) {
@@ -64,13 +67,15 @@
     const harm = sum(mo.harm), modelled = sum(mo.modelled);
     const lo = [], hi = [];
     YEARS.forEach((y, i) => { const obs = (harm[i] || 0) - (modelled[i] || 0); const [l, h] = band(modelled[i] || 0); lo.push(obs + l); hi.push(obs + h); });
-    return { harm, modis: sum(mo.modis), snpp: sum(mo.snpp), noaa20: sum(mo.noaa20), joined: sum(mo.joined), lo, hi, modelled };
+    return { harm, modis: sum(mo.modis), snpp: sum(mo.snpp), noaa20: sum(mo.noaa20), noaa21: sum(mo.noaa21), joined: sum(mo.joined), lo, hi, modelled };
   }
   function monthIdx(y, m) { return (y - Y0) * 12 + m; }
   function median(arr) { const a = arr.filter((v) => v != null).sort((x, y) => x - y); if (!a.length) return null; const k = a.length >> 1; return a.length % 2 ? a[k] : (a[k - 1] + a[k]) / 2; }
 
   // ---------- state --------------------------------------------------------------------------
-  const state = { cells: allCells, name: 'Argentina', provIdx: null, year: 2025, month: -1, layer: 'harm', raw: false, drawing: false };
+  const state = { cells: allCells, name: 'Argentina', provIdx: null, year: YEARS[YEARS.length - 1], month: -1, layer: 'harm', raw: false, drawing: false };
+  $('year').max = state.year; $('year').value = state.year; $('year-out').value = state.year;
+  $('last-day').textContent = meta.last_day || meta.months[NM - 1];
 
   // ---------- map ----------------------------------------------------------------------------
   const map = L.map('map', { zoomControl: true, preferCanvas: true, attributionControl: true }).setView([-38.5, -64], 4);
@@ -95,14 +100,14 @@
   function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
   function mix(a, b, t) { const g = (x) => Math.pow(x / 255, 2.2), ig = (x) => Math.round(255 * Math.pow(x, 1 / 2.2)); return `rgb(${ig(g(a[0]) + (g(b[0]) - g(a[0])) * t)},${ig(g(a[1]) + (g(b[1]) - g(a[1])) * t)},${ig(g(a[2]) + (g(b[2]) - g(a[2])) * t)})`; }
   const ramp = (t) => mix(hexToRgb(css('--fire-lo')), hexToRgb(css('--fire-hi')), Math.max(0, Math.min(1, t)));
-  const SRC_COL = ['transparent', css('--src1'), css('--src2'), css('--src3'), css('--src4')];
-  const SRC_NAME = ['no data', 'S-NPP observed', 'NOAA-20 scaled', 'MODIS × k', 'Terra-only, bridged × k'];
+  const SRC_COL = ['transparent', css('--src1'), css('--src2'), css('--src3'), css('--src4'), css('--noaa21')];
+  const SRC_NAME = ['no data', 'S-NPP observed', 'NOAA-20 scaled', 'MODIS × k', 'Terra-only, bridged × k', 'NOAA-21 scaled'];
 
   function cellValue(ci, layer = state.layer) {
     const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
-    if (layer === 'src') { const c = [0, 0, 0, 0, 0]; months.forEach((mi) => c[S.src.a[ci * NM + mi]]++); return c.indexOf(Math.max(...c)); }
+    if (layer === 'src') { const c = [0, 0, 0, 0, 0, 0]; months.forEach((mi) => c[S.src.a[ci * NM + mi]]++); return c.indexOf(Math.max(...c)); }
     if (layer === 'k') { let m = 0, h = 0; months.forEach((mi) => { const mm = val('hs_modis', ci, mi), hh = val('hs_harm', ci, mi); if (mm != null && hh != null && S.src.a[ci * NM + mi] >= 3) { m += mm; h += hh; } }); return m > 0 ? h / m : null; }
-    const name = { harm: 'hs_harm', modis: 'hs_modis', snpp: 'hs_snpp', noaa20: 'hs_noaa20' }[layer];
+    const name = { harm: 'hs_harm', modis: 'hs_modis', snpp: 'hs_snpp', noaa20: 'hs_noaa20', noaa21: 'hs_noaa21' }[layer];
     let t = null; months.forEach((mi) => { const v = val(name, ci, mi); if (v != null) t = (t || 0) + v; });
     return t;
   }
@@ -111,7 +116,7 @@
     const leg = $('legend'); leg.textContent = '';
     if (state.layer === 'src') {
       polys.forEach((p, i) => p.setStyle({ fillColor: SRC_COL[vals[i]] || 'transparent', fillOpacity: vals[i] ? 0.8 : 0 }));
-      [1, 2, 3, 4].forEach((k) => { const sw = document.createElement('span'); sw.className = 'sw'; const i = document.createElement('i'); i.style.background = SRC_COL[k]; sw.append(i, document.createTextNode(SRC_NAME[k])); leg.append(sw); });
+      [1, 2, 5, 3, 4].forEach((k) => { const sw = document.createElement('span'); sw.className = 'sw'; const i = document.createElement('i'); i.style.background = SRC_COL[k]; sw.append(i, document.createTextNode(SRC_NAME[k])); leg.append(sw); });
       return;
     }
     if (state.layer === 'k') {
@@ -122,14 +127,14 @@
     const pos = vals.filter((v) => v > 0).sort((a, b) => a - b);
     const vmax = pos.length ? pos[Math.floor(pos.length * 0.98)] : 1;
     polys.forEach((p, i) => { const v = vals[i]; p.setStyle({ fillColor: v == null ? 'transparent' : v === 0 ? css('--surface') : ramp(Math.log1p(v) / Math.log1p(vmax)), fillOpacity: v == null ? 0 : v === 0 ? 0.25 : 0.85 }); });
-    const unit = { harm: 'harmonized hot spots', modis: 'MODIS hot spots (raw)', snpp: 'S-NPP hot spots (raw)', noaa20: 'NOAA-20 hot spots (raw)' }[state.layer];
+    const unit = { harm: 'harmonized hot spots', modis: 'MODIS hot spots (raw)', snpp: 'S-NPP hot spots (raw)', noaa20: 'NOAA-20 hot spots (raw)', noaa21: 'NOAA-21 hot spots (raw)' }[state.layer];
     legendRamp(leg, '1', fmt(vmax) + '+', unit + ', ' + periodLabel() + ' (log scale; blank = sensor not flying)');
   }
   function legendRamp(leg, lo, hi, text) {
     const r = document.createElement('div'); r.className = 'ramp'; r.style.background = `linear-gradient(90deg, ${ramp(0)}, ${ramp(0.5)}, ${ramp(1)})`;
     leg.append(document.createTextNode(lo), r, document.createTextNode(hi), document.createElement('br'), document.createTextNode(text));
   }
-  function periodLabel() { return state.month < 0 ? String(state.year) : MONTHS[state.month] + ' ' + state.year; }
+  function periodLabel() { const partial = state.year === LAST_YEAR && meta.last_day ? ` (to ${meta.last_day.slice(5)})` : ''; return (state.month < 0 ? String(state.year) : MONTHS[state.month] + ' ' + state.year) + partial; }
 
   // selection outline
   function drawSelection() {
@@ -164,7 +169,7 @@
   function tipForCell(ci) {
     const c = meta.cells[ci]; const d = document.createElement('div');
     const title = document.createElement('div'); title.textContent = (meta.provinces[c.p] || 'offshore') + ' · cell ' + c.h.slice(0, 7); title.className = 'muted'; d.append(title);
-    const rows = [['hs_harm', 'harmonized', css('--harm')], ['hs_modis', 'MODIS raw', css('--modis')], ['hs_snpp', 'S-NPP raw', css('--snpp')], ['hs_noaa20', 'NOAA-20 raw', css('--noaa20')]];
+    const rows = [['hs_harm', 'harmonized', css('--harm')], ['hs_modis', 'MODIS raw', css('--modis')], ['hs_snpp', 'S-NPP raw', css('--snpp')], ['hs_noaa20', 'NOAA-20 raw', css('--noaa20')], ['hs_noaa21', 'NOAA-21 raw', css('--noaa21')]];
     const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
     for (const [name, label, col] of rows) {
       let t = null; months.forEach((mi) => { const v = val(name, ci, mi); if (v != null) t = (t || 0) + v; });
@@ -191,11 +196,13 @@
       { x, y: an.modis, name: 'MODIS raw', mode: 'lines', line: { color: css('--modis'), width: 2 }, connectgaps: false },
       { x, y: an.snpp, name: 'VIIRS S-NPP raw', mode: 'lines', line: { color: css('--snpp'), width: 2 } },
       { x, y: an.noaa20, name: 'VIIRS NOAA-20 raw', mode: 'lines', line: { color: css('--noaa20'), width: 2 } },
+      { x, y: an.noaa21, name: 'VIIRS NOAA-21 raw', mode: 'lines', line: { color: css('--noaa21'), width: 2 } },
       { x, y: an.harm, name: 'Harmonized (VIIRS scale)', mode: 'lines', line: { color: css('--harm'), width: 2.5 } },
     ];
     if (state.raw) traces.push({ x, y: an.joined, name: 'Naive joined record', mode: 'lines+markers', line: { color: css('--joined'), width: 2 }, marker: { size: 6 } });
     const lay = base(); lay.yaxis.title = { text: 'hot spots / year', font: { size: 12 } }; lay.shapes = [{ type: 'line', x0: 2012, x1: 2012, y0: 0, y1: 1, yref: 'paper', line: { color: css('--axis'), width: 1 } }];
-    lay.annotations = [{ x: 2012, y: 0.02, yref: 'paper', text: 'VIIRS starts', showarrow: false, xanchor: 'left', yanchor: 'bottom', font: { size: 11, color: css('--muted') } }];
+    lay.annotations = [{ x: 2012, y: 0.02, yref: 'paper', text: 'VIIRS starts', showarrow: false, xanchor: 'left', yanchor: 'bottom', font: { size: 11, color: css('--muted') } },
+      { x: LAST_YEAR, y: 0.02, yref: 'paper', text: meta.last_day ? 'partial year' : '', showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { size: 11, color: css('--muted') } }];
     Plotly.react('chart-annual', traces, lay, CFG);
   }
   function chartCalendar(mo) {
@@ -206,11 +213,12 @@
     Plotly.react('chart-calendar', [{ type: 'heatmap', x: MONTHS, y: YEARS, z, text, hoverinfo: 'text', xgap: 2, ygap: 2, colorscale: [[0, ramp(0)], [0.5, ramp(0.5)], [1, ramp(1)]], showscale: true, colorbar: { thickness: 8, len: 0.9, outlinewidth: 0, tickfont: { color: css('--muted'), size: 11 } }, zmin: 0 }], lay, CFG);
   }
   function chartSeason(mo) {
-    const med = MONTHS.map((_, m) => median(YEARS.map((y) => mo.harm[monthIdx(y, m)])));
+    const full = YEARS.filter((y) => !(y === LAST_YEAR && meta.last_day));
+    const med = MONTHS.map((_, m) => median(full.map((y) => mo.harm[monthIdx(y, m)])));
     const sel = MONTHS.map((_, m) => mo.harm[monthIdx(state.year, m)]);
     const lay = base(); lay.hovermode = 'x unified'; lay.yaxis.title = { text: 'hot spots / month', font: { size: 12 } }; lay.bargap = 0.35;
     Plotly.react('chart-season', [
-      { type: 'bar', x: MONTHS, y: med, name: 'Median month 2001–2025', marker: { color: css('--band'), line: { width: 0 } } },
+      { type: 'bar', x: MONTHS, y: med, name: `Median month ${full[0]}–${full[full.length - 1]}`, marker: { color: css('--band'), line: { width: 0 } } },
       { type: 'scatter', mode: 'lines+markers', x: MONTHS, y: sel, name: String(state.year), line: { color: css('--harm'), width: 2 }, marker: { size: 7, color: css('--harm') } },
     ], lay, CFG);
   }
@@ -239,16 +247,16 @@
   function renderTable(mo, an) {
     const t = $('table'); t.textContent = '';
     const head = document.createElement('tr');
-    ['Year', 'Harmonized', '90% low', '90% high', 'MODIS raw', 'S-NPP raw', 'NOAA-20 raw', 'Modelled share'].forEach((h) => { const th = document.createElement('th'); th.textContent = h; head.append(th); });
+    ['Year', 'Harmonized', '90% low', '90% high', 'MODIS raw', 'S-NPP raw', 'NOAA-20 raw', 'NOAA-21 raw', 'Modelled share'].forEach((h) => { const th = document.createElement('th'); th.textContent = h; head.append(th); });
     t.append(head);
     YEARS.forEach((y, i) => {
       const tr = document.createElement('tr');
-      [y, fmt(an.harm[i]), fmt(an.lo[i]), fmt(an.hi[i]), fmt(an.modis[i]), fmt(an.snpp[i]), fmt(an.noaa20[i]), an.harm[i] ? Math.round(100 * (an.modelled[i] || 0) / an.harm[i]) + '%' : '–'].forEach((v) => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
+      [y === LAST_YEAR && meta.last_day ? `${y} (partial)` : y, fmt(an.harm[i]), fmt(an.lo[i]), fmt(an.hi[i]), fmt(an.modis[i]), fmt(an.snpp[i]), fmt(an.noaa20[i]), fmt(an.noaa21[i]), an.harm[i] ? Math.round(100 * (an.modelled[i] || 0) / an.harm[i]) + '%' : '–'].forEach((v) => { const td = document.createElement('td'); td.textContent = v; tr.append(td); });
       t.append(tr);
     });
     $('csv-btn').onclick = () => {
-      const lines = ['month,harmonized_hotspots,band_low,band_high,modis_raw,snpp_raw,noaa20_raw,source_mix'];
-      for (let mi = 0; mi < NM; mi++) lines.push([meta.months[mi], mo.harm[mi].toFixed(1), mo.lo[mi].toFixed(1), mo.hi[mi].toFixed(1), mo.modis[mi] ?? '', mo.snpp[mi] ?? '', mo.noaa20[mi] ?? '', mo.src[mi].map((n, k) => n ? `${SRC_NAME[k]}:${n}` : '').filter(Boolean).join('|')].join(','));
+      const lines = ['month,harmonized_hotspots,band_low,band_high,modis_raw,snpp_raw,noaa20_raw,noaa21_raw,source_mix'];
+      for (let mi = 0; mi < NM; mi++) lines.push([meta.months[mi], mo.harm[mi].toFixed(1), mo.lo[mi].toFixed(1), mo.hi[mi].toFixed(1), mo.modis[mi] ?? '', mo.snpp[mi] ?? '', mo.noaa20[mi] ?? '', mo.noaa21[mi] ?? '', mo.src[mi].map((n, k) => n ? `${SRC_NAME[k]}:${n}` : '').filter(Boolean).join('|')].join(','));
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = `burning_calendar_${state.name.replace(/[^a-z0-9]+/gi, '_')}.csv`; a.click();
     };
   }
@@ -258,20 +266,28 @@
     let cur, lo, hi, normal, hist;
     if (state.month < 0) { cur = an.harm[yi]; lo = an.lo[yi]; hi = an.hi[yi]; hist = an.harm; }
     else { const mi = monthIdx(state.year, state.month); cur = mo.harm[mi]; lo = mo.lo[mi]; hi = mo.hi[mi]; hist = YEARS.map((y) => mo.harm[monthIdx(y, state.month)]); }
-    normal = median(hist);
+    normal = median(hist.filter((v, i) => !(YEARS[i] === LAST_YEAR && meta.last_day)));
     $('hero-label').textContent = `Hot spots, ${periodLabel()}`;
     $('hero-value').textContent = fmt(cur);
     $('hero-sub').textContent = lo !== hi ? `90% band ${fmt(lo)}–${fmt(hi)} (pre-2012 is modelled)` : 'observed by VIIRS';
     const rank = hist.filter((v) => v != null && v > cur).length + 1;
+    // critical period: shortest run of calendar months (circular) holding >= 2/3 of a median year's fire
+    const fullYears = YEARS.filter((y) => !(y === LAST_YEAR && meta.last_day));
+    const med = MONTHS.map((_, m) => median(fullYears.map((y) => mo.harm[monthIdx(y, m)])) || 0);
+    const totMed = med.reduce((a, b) => a + b, 0);
+    let best = null;
+    if (totMed > 0) for (let len = 1; len <= 12 && !best; len++) for (let s0 = 0; s0 < 12; s0++) { let acc = 0; for (let k = 0; k < len; k++) acc += med[(s0 + k) % 12]; if (acc / totMed >= 2 / 3) { best = { s0, len, share: acc / totMed }; break; } }
+    $('crit-value').textContent = best ? (best.len === 12 ? 'all year' : best.len === 1 ? MONTHS[best.s0] : `${MONTHS[best.s0]}–${MONTHS[(best.s0 + best.len - 1) % 12]}`) : '–';
+    $('crit-sub').textContent = best ? `${best.len} month${best.len > 1 ? 's' : ''} hold ${Math.round(100 * best.share)}% of a normal year's fire` : 'not enough fire to define';
     const pct = normal > 0 ? Math.round(100 * (cur / normal - 1)) : null;
     $('anom-value').textContent = pct == null ? '–' : (pct >= 0 ? '+' : '') + pct + '%';
     $('anom-sub').textContent = `rank ${rank} of ${YEARS.length} ${state.month < 0 ? 'years' : MONTHS[state.month] + 's'} · normal ${fmt(normal)}`;
     const months = state.month < 0 ? Array.from({ length: 12 }, (_, m) => monthIdx(state.year, m)) : [monthIdx(state.year, state.month)];
-    const mix = [0, 0, 0, 0, 0]; months.forEach((mi) => mo.src[mi].forEach((n, k) => (mix[k] += n)));
+    const mix = [0, 0, 0, 0, 0, 0]; months.forEach((mi) => mo.src[mi].forEach((n, k) => (mix[k] += n)));
     const tot = mix.slice(1).reduce((a, b) => a + b, 0) || 1;
     const bar = $('src-bar'); bar.textContent = '';
-    [1, 2, 3, 4].forEach((k) => { if (!mix[k]) return; const s = document.createElement('span'); s.style.width = (100 * mix[k] / tot) + '%'; s.style.background = SRC_COL[k]; s.title = SRC_NAME[k]; bar.append(s); });
-    $('src-sub').textContent = [1, 2, 3, 4].filter((k) => mix[k]).map((k) => `${Math.round(100 * mix[k] / tot)}% ${SRC_NAME[k]}`).join(' · ');
+    [1, 2, 5, 3, 4].forEach((k) => { if (!mix[k]) return; const s = document.createElement('span'); s.style.width = (100 * mix[k] / tot) + '%'; s.style.background = SRC_COL[k]; s.title = SRC_NAME[k]; bar.append(s); });
+    $('src-sub').textContent = [1, 2, 5, 3, 4].filter((k) => mix[k]).map((k) => `${Math.round(100 * mix[k] / tot)}% ${SRC_NAME[k]}`).join(' · ');
   }
 
   function renderPanel() {
@@ -307,6 +323,7 @@
     mk('Seam test at 2012 (2013–15 mean over 2009–11 mean, national)', [['Naive joined record', v.seam_2012_national.raw_joined_post_over_pre + '×'], ['Harmonized', v.seam_2012_national.harmonized_post_over_pre + '×'], ['MODIS alone (control)', v.seam_2012_national.modis_only_post_over_pre + '×'], ['LightGBM variant', v.seam_2012_national.harmonized_lgbm_post_over_pre + '×']], ['Record', 'Ratio']);
     mk('National factor k = S-NPP / MODIS by calendar month (hot spots; FRP)', MONTHS.map((m, i) => [m, v.k_national_by_month[i + 1], v.k_frp_national_by_month[i + 1]]), ['Month', 'k hot spots', 'k FRP']);
     mk('NOAA-20 / S-NPP by year (hot spots; FRP)', Object.keys(v.noaa20_over_snpp_by_year.hotspots).map((y) => [y, v.noaa20_over_snpp_by_year.hotspots[y], v.noaa20_over_snpp_by_year.frp[y]]), ['Year', 'hot spots', 'FRP']);
+    if (v.noaa21_over_snpp_by_year) mk('NOAA-21 / S-NPP by year (hot spots; FRP)', Object.keys(v.noaa21_over_snpp_by_year.hotspots).map((y) => [y, v.noaa21_over_snpp_by_year.hotspots[y], v.noaa21_over_snpp_by_year.frp[y]]), ['Year', 'hot spots', 'FRP']);
     mk('Terra-only bridge: (Terra+Aqua)/Terra cell-days by month, 2003–2011', MONTHS.map((m, i) => [m, v.terra_only_bridge_national_by_month[i + 1]]), ['Month', 'factor']);
   }
 
@@ -336,7 +353,7 @@
 
   // URL state (?aoi=Corrientes&year=2020&month=8&layer=modis&tab=switch) so views can be shared
   const q = new URLSearchParams(location.search);
-  if (q.get('year')) { state.year = Math.min(YEARS[YEARS.length - 1], Math.max(Y0, +q.get('year'))); $('year').value = state.year; $('year-out').value = state.year; }
+  if (q.get('year')) { state.year = Math.min(LAST_YEAR, Math.max(Y0, +q.get('year'))); $('year').value = state.year; $('year-out').value = state.year; }
   if (q.get('month')) { state.month = +q.get('month'); $('month').value = state.month; }
   if (q.get('layer') && [...$('layer').options].some((o) => o.value === q.get('layer'))) { state.layer = q.get('layer'); $('layer').value = state.layer; }
   if (q.get('raw') === '1') { state.raw = true; $('show-raw').checked = true; }

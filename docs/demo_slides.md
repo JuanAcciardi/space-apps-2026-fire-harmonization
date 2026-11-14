@@ -1,6 +1,6 @@
 # Demo deck — 7 slides max (Space Apps rule). Speaker notes in italics.
 
-1. **Title.** Burning Activity Calendar — one fire record from MODIS and VIIRS. Team `[name]`, members `[...]`, challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE). Screenshot of the app.
+1. **Title.** Burning Activity Calendar — one fire record from MODIS and VIIRS. Team **LMA**: Juan Ignacio Acciardi, Verónica Ana López Marsico, challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE). Screenshot of the app.
 
 2. **The problem in one chart.** The "2012 switch" chart: naive joined record jumps +50% in 2012 while MODIS alone falls 30%. *VIIRS sees ~2× the hot spots of MODIS for the same fire. Join them and you invent a fire boom.*
 
@@ -12,4 +12,4 @@
 
 6. **The product.** App screenshot for Corrientes 2022: calendar, seasonality, daily calendar, source bar, CSV. *Any province, drawn box or cell. Shareable URLs. Runs on GitHub Pages with no server; 28 MB of binary arrays.*
 
-7. **Why now, what next.** Suomi NPP data ended 2 Nov 2026; MODIS ends 2027. Same code ties NOAA-21 to NOAA-20 and the next sensor to VIIRS. Next: near-real-time 2026 via FIRMS API, CONAE SAOCOM/burned area cross-check, Latin America coverage. Links: repo, app.
+7. **Why now, what next.** Suomi NPP data ended 2 Nov 2026; MODIS ends 2027. Same code ties NOAA-21 to NOAA-20 and the next sensor to VIIRS. Next: near-real-time 2026 via FIRMS API, CONAE SAOCOM/burned area cross-check, Latin America coverage. Links: github.com/JuanAcciardi/space-apps-2026-fire-harmonization · juanacciardi.github.io/space-apps-2026-fire-harmonization

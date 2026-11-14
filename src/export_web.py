@@ -55,6 +55,7 @@ def main():
         ("hotspots_MODIS", "hs_modis", np.int16, 1, "MODIS Terra+Aqua hotspots (res-6 cell-days), raw"),
         ("hotspots_SNPP", "hs_snpp", np.int16, 1, "VIIRS S-NPP hotspots, raw"),
         ("hotspots_NOAA20", "hs_noaa20", np.int16, 1, "VIIRS NOAA-20 hotspots, raw"),
+        ("hotspots_NOAA21", "hs_noaa21", np.int16, 1, "VIIRS NOAA-21 hotspots, raw"),
         ("harm_hotspots", "hs_harm", np.int16, 10, "harmonized hotspots on S-NPP scale (ratio method), x10"),
         ("harm_hotspots_lgbm", "hs_lgbm", np.int16, 10, "harmonized hotspots, LightGBM variant, x10"),
         ("harm_lo", "hs_lo", np.int16, 10, "5% quantile band for modelled months, x10"),
@@ -62,6 +63,7 @@ def main():
         ("frp_MODIS", "frp_modis", np.float32, 1, "MODIS FRP sum (MW), raw"),
         ("frp_SNPP", "frp_snpp", np.float32, 1, "S-NPP FRP sum (MW), raw"),
         ("frp_NOAA20", "frp_noaa20", np.float32, 1, "NOAA-20 FRP sum (MW), raw"),
+        ("frp_NOAA21", "frp_noaa21", np.float32, 1, "NOAA-21 FRP sum (MW), raw"),
         ("harm_frp", "frp_harm", np.float32, 1, "harmonized FRP on S-NPP scale (MW)"),
         ("n_det_MODIS", "det_modis", np.int32, 1, "MODIS raw detections (pixels)"),
         ("n_det_SNPP", "det_snpp", np.int32, 1, "S-NPP raw detections (pixels)"),
@@ -70,7 +72,7 @@ def main():
         if col not in h.columns:
             continue
         dump(name, to_matrix(h, "h3_4", cell_index, "month", month_index, col, dt, sc), sc, desc)
-    src_code = {"SNPP observed": 1, "NOAA20 scaled": 2, "MODIS x k": 3, "MODIS Terra-only bridged x k": 4}
+    src_code = {"SNPP observed": 1, "NOAA20 scaled": 2, "MODIS x k": 3, "MODIS Terra-only bridged x k": 4, "NOAA21 scaled": 5}
     h["src_code"] = h.source.map(src_code).fillna(0)
     dump("src", to_matrix(h, "h3_4", cell_index, "month", month_index, "src_code", np.uint8, 1, na=0), 1,
          "source of harmonized value: " + ", ".join(f"{v}={k}" for k, v in src_code.items()))
@@ -86,8 +88,8 @@ def main():
     rows = provinces + ["__national__"]
     row_index = {p: i for i, p in enumerate(rows)}
     # ventanas de actividad: cero explícito dentro de la ventana
-    windows = {"MODIS": (C.SAT_START["Terra"], None), "SNPP": (C.SAT_START["SNPP"], C.SAT_END["SNPP"]), "NOAA20": (C.SAT_START["NOAA20"], None)}
-    for sg in ["MODIS", "SNPP", "NOAA20"]:
+    windows = {"MODIS": (C.SAT_START["Terra"], C.LAST_DAY), "SNPP": (C.SAT_START["SNPP"], C.SAT_END["SNPP"]), "NOAA20": (C.SAT_START["NOAA20"], C.LAST_DAY), "NOAA21": (C.SAT_START["NOAA21"], C.LAST_DAY)}
+    for sg in ["MODIS", "SNPP", "NOAA20", "NOAA21"]:
         d = dp[dp.sensor_group == sg]
         mat = to_matrix(d, "provincia", row_index, "local_date", day_index, "hotspots", np.int16)
         s, e = windows[sg]
@@ -99,9 +101,10 @@ def main():
     # diario armonizado: escala MODIS diario con el factor mensual provincial implícito en el registro armonizado
     hm = h.merge(cells[["h3_4", "provincia"]], on="h3_4")
     hm_nat = hm.assign(provincia="__national__")
-    pm = pd.concat([hm, hm_nat]).groupby(["provincia", "month"], as_index=False)[["hotspots_MODIS", "harm_hotspots", "hotspots_SNPP"]].sum(min_count=1)
+    pm = pd.concat([hm, hm_nat]).groupby(["provincia", "month"], as_index=False)[["hotspots_MODIS", "harm_hotspots", "hotspots_SNPP", "hotspots_NOAA20"]].sum(min_count=1)
     pm["factor"] = np.where(pm.hotspots_MODIS > 0, pm.harm_hotspots / pm.hotspots_MODIS, np.nan)
-    pm["use_snpp"] = pm.hotspots_SNPP.notna()
+    pm["use_snpp"] = pm.hotspots_SNPP.notna() & (pd.to_datetime(pm.month) < pd.Timestamp(C.SAT_END["SNPP"]).replace(day=1))
+    pm["use_n20"] = ~pm.use_snpp & pm.hotspots_NOAA20.notna()
     daily_harm = np.full((len(rows), len(days)), np.nan, dtype=np.float32)
     modis_d = np.fromfile(out / "daily_hs_modis.bin", dtype="<i2").reshape(len(rows), len(days)).astype(float)
     snpp_d = np.fromfile(out / "daily_hs_snpp.bin", dtype="<i2").reshape(len(rows), len(days)).astype(float)
@@ -118,6 +121,9 @@ def main():
             # días sin S-NPP pero con NOAA-20 (cortes del sensor): NOAA-20 escalado
             v = np.where((v <= 0) & (n20_d[ri, cols] > 0), n20_d[ri, cols] * k_n20, v)
             daily_harm[ri, cols] = np.where(v < 0, np.nan, v)
+        elif r.use_n20:
+            v = n20_d[ri, cols] * k_n20
+            daily_harm[ri, cols] = np.where(v < 0, np.nan, v)
         elif not np.isnan(r.factor):
             daily_harm[ri, cols] = np.where(modis_d[ri, cols] < 0, np.nan, modis_d[ri, cols] * r.factor)
         else:
@@ -131,17 +137,18 @@ def main():
         "generated": pd.Timestamp.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "country": C.COUNTRY,
         "months": [m.strftime("%Y-%m") for m in months],
-        "days_start": days[0].strftime("%Y-%m-%d"), "n_days": len(days),
+        "days_start": days[0].strftime("%Y-%m-%d"), "n_days": len(days), "last_day": C.LAST_DAY,
         "cells": [{"h": r.h, "lat": round(r.lat, 4), "lon": round(r.lon, 4), "p": int(r.p), "a": round(r.area_km2)} for r in cells.itertuples()],
         "provinces": provinces,
         "daily_rows": rows,
         "series": series,
         "h3_res": {"hotspot": C.H3_HOTSPOT, "cell": C.H3_CELL, "region": C.H3_REGION},
         "filters": {"types": list(C.KEEP_TYPES), "modis_min_confidence": C.MODIS_MIN_CONFIDENCE, "viirs_drop": list(C.VIIRS_DROP_CONFIDENCE)},
-        "sensor_windows": {"MODIS": [C.SAT_START["Terra"], None], "SNPP": [C.SAT_START["SNPP"], C.SAT_END["SNPP"]], "NOAA20": [C.SAT_START["NOAA20"], None]},
-        "validation": {k: val[k] for k in ["noaa20_to_snpp_factor", "noaa20_over_snpp_by_year", "backtest_2012_2015",
+        "sensor_windows": {"MODIS": [C.SAT_START["Terra"], None], "SNPP": [C.SAT_START["SNPP"], C.SAT_END["SNPP"]], "NOAA20": [C.SAT_START["NOAA20"], None], "NOAA21": [C.SAT_START["NOAA21"], None]},
+        "team": "LMA — Juan Ignacio Acciardi, Verónica Ana López Marsico",
+        "validation": {k: val[k] for k in ["noaa20_to_snpp_factor", "noaa20_over_snpp_by_year", "noaa21_to_snpp_factor", "noaa21_over_snpp_by_year", "backtest_2012_2015",
                                            "seam_2012_national", "k_national_by_month", "k_frp_national_by_month",
-                                           "terra_only_bridge_national_by_month", "aggregate_uncertainty_lookup", "national_annual"]},
+                                           "terra_only_bridge_national_by_month", "aggregate_uncertainty_lookup", "national_annual"] if k in val},
     }
     with open(out / "meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, separators=(",", ":"))

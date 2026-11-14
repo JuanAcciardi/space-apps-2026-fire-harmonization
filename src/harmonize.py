@@ -110,6 +110,20 @@ def main():
     k_n20 = pv.hotspots_SNPP.sum() / pv.hotspots_NOAA20.sum()
     k_n20_frp = pv.frp_SNPP.sum() / pv.frp_NOAA20.sum()
     val["noaa20_to_snpp_factor"] = {"hotspots": round(float(k_n20), 4), "frp": round(float(k_n20_frp), 4)}
+    # NOAA-21 -> SNPP (solapamiento 2023-03 .. 2025-12)
+    k_n21, k_n21_frp = 1.0, 1.0
+    if (panel.sensor_group == "NOAA21").any():
+        ov21 = panel[panel.sensor_group.isin(["SNPP", "NOAA21"]) & panel.active & (panel.month >= C.SAT_START["NOAA21"])]
+        pv21 = ov21.pivot_table(index=["h3_4", "month"], columns="sensor_group", values=["hotspots", "frp"]).dropna()
+        pv21.columns = [f"{a}_{b}" for a, b in pv21.columns]
+        pv21 = pv21.reset_index()
+        if len(pv21):
+            k_n21 = pv21.hotspots_SNPP.sum() / pv21.hotspots_NOAA21.sum()
+            k_n21_frp = pv21.frp_SNPP.sum() / pv21.frp_NOAA21.sum()
+            by21 = pv21.groupby(pv21.month.dt.year).sum(numeric_only=True)
+            val["noaa21_over_snpp_by_year"] = {"hotspots": {int(k): float(v) for k, v in (by21.hotspots_NOAA21 / by21.hotspots_SNPP).round(3).items()},
+                                               "frp": {int(k): float(v) for k, v in (by21.frp_NOAA21 / by21.frp_SNPP).round(3).items()}}
+    val["noaa21_to_snpp_factor"] = {"hotspots": round(float(k_n21), 4), "frp": round(float(k_n21_frp), 4)}
 
     # ---------- backtest: ajustar 2016-2025, predecir 2012-2015 -----------------------------
     overlap_years = list(range(2012, 2026))
@@ -161,14 +175,21 @@ def main():
     wide = wide.reset_index()
     h = wide.merge(mall[["h3_4", "month", "ratio_hs", "ratio_frp", "lgbm_hs", "k_hotspots", "k_frp", "bridge"]],
                    on=["h3_4", "month"], how="left")
+    for c in ["hotspots_NOAA21", "frp_NOAA21", "n_det_NOAA21"]:
+        if c not in h.columns:
+            h[c] = np.nan
     snpp_ok = h["hotspots_SNPP"].notna()
     n20_ok = h["hotspots_NOAA20"].notna()
-    h["harm_hotspots"] = np.where(snpp_ok, h["hotspots_SNPP"], np.where(n20_ok, h["hotspots_NOAA20"] * k_n20, h["ratio_hs"]))
-    h["harm_frp"] = np.where(snpp_ok, h["frp_SNPP"], np.where(n20_ok, h["frp_NOAA20"] * k_n20_frp, h["ratio_frp"]))
-    h["harm_hotspots_lgbm"] = np.where(snpp_ok, h["hotspots_SNPP"], np.where(n20_ok, h["hotspots_NOAA20"] * k_n20, h["lgbm_hs"]))
+    n21_ok = h["hotspots_NOAA21"].notna()
+    # S-NPP terminó el 2026-11-02: ese mes parcial se reemplaza por NOAA-20 para no mezclar medio mes
+    snpp_ok = snpp_ok & (h.month < pd.Timestamp(C.SAT_END["SNPP"]).replace(day=1))
+    h["harm_hotspots"] = np.where(snpp_ok, h["hotspots_SNPP"], np.where(n20_ok, h["hotspots_NOAA20"] * k_n20, np.where(n21_ok, h["hotspots_NOAA21"] * k_n21, h["ratio_hs"])))
+    h["harm_frp"] = np.where(snpp_ok, h["frp_SNPP"], np.where(n20_ok, h["frp_NOAA20"] * k_n20_frp, np.where(n21_ok, h["frp_NOAA21"] * k_n21_frp, h["ratio_frp"])))
+    h["harm_hotspots_lgbm"] = np.where(snpp_ok, h["hotspots_SNPP"], np.where(n20_ok, h["hotspots_NOAA20"] * k_n20, np.where(n21_ok, h["hotspots_NOAA21"] * k_n21, h["lgbm_hs"])))
     h["source"] = np.where(snpp_ok, "SNPP observed",
                   np.where(n20_ok, "NOAA20 scaled",
-                  np.where(h.bridge.fillna(1) != 1, "MODIS Terra-only bridged x k", "MODIS x k")))
+                  np.where(n21_ok, "NOAA21 scaled",
+                  np.where(h.bridge.fillna(1) != 1, "MODIS Terra-only bridged x k", "MODIS x k"))))
 
     # banda de incertidumbre para valores modelados: cuantiles del error relativo del backtest por tamaño de predicción
     edges = [0, 2, 5, 10, 25, 50, 100, 1e9]
@@ -182,12 +203,12 @@ def main():
     hb = pd.cut(h.ratio_hs.fillna(0), edges).astype(str)
     lo = hb.map(lambda b: qs.get(b, (0.0, 0.0))[0]).astype(float).fillna(0.0)
     hi = hb.map(lambda b: qs.get(b, (0.0, 0.0))[1]).astype(float).fillna(0.0)
-    modelled = ~snpp_ok & ~n20_ok
+    modelled = ~snpp_ok & ~n20_ok & ~n21_ok
     h["harm_lo"] = np.where(modelled, h.ratio_hs.fillna(0) * lo, h.harm_hotspots)
     h["harm_hi"] = np.where(modelled, np.maximum(h.ratio_hs.fillna(0) * hi, (h.ratio_hs.fillna(0) > 0).astype(float)), h.harm_hotspots)
 
     # ---------- prueba de continuidad en 2012 (nacional) ------------------------------------
-    nat = h.groupby(h.month.dt.year)[["hotspots_MODIS", "hotspots_SNPP", "hotspots_NOAA20", "harm_hotspots", "harm_hotspots_lgbm", "harm_lo", "harm_hi"]].sum(min_count=1).astype(float)
+    nat = h.groupby(h.month.dt.year)[["hotspots_MODIS", "hotspots_SNPP", "hotspots_NOAA20", "hotspots_NOAA21", "harm_hotspots", "harm_hotspots_lgbm", "harm_lo", "harm_hi"]].sum(min_count=1).astype(float)
     raw_join = pd.Series(np.where(nat.hotspots_SNPP.notna(), nat.hotspots_SNPP, nat.hotspots_MODIS), index=nat.index)
     pre, post = slice(2009, 2011), slice(2013, 2015)
     val["seam_2012_national"] = {
